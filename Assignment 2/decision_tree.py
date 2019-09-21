@@ -41,9 +41,15 @@ def partition(x):
       ...
       vk: indices of x == vk }, where [v1, ... vk] are all the unique values in the vector z.
     """
-
+    count={}
+    for val in x:
+    if not val in count:
+        count[val] = 1
+    else:
+        count[val] += 1
+    return x
     # INSERT YOUR CODE HERE
-    raise Exception('Function not yet implemented!')
+    #raise Exception('Function not yet implemented!')
 
 
 def entropy(y):
@@ -52,9 +58,21 @@ def entropy(y):
 
     Returns the entropy of z: H(z) = p(z=v1) log2(p(z=v1)) + ... + p(z=vk) log2(p(z=vk))
     """
-
+    count={}
+    for val in y:
+    if not val in count:
+        count[val] = 1
+    else:
+        count[val] += 1
+    total=0
+    for key, value in count.items():
+        total += value
+    entrpy=0
+    for key,value in count.items():
+        entrpy += -1*(value/total)*math.log((value/total), 2)
+    return entrpy
     # INSERT YOUR CODE HERE
-    raise Exception('Function not yet implemented!')
+    #raise Exception('Function not yet implemented!')
 
 
 def mutual_information(x, y):
