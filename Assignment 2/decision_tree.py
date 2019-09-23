@@ -41,14 +41,14 @@ def partition(x):
       ...
       vk: indices of x == vk }, where [v1, ... vk] are all the unique values in the vector z.
     """
-    count={}
-    for val in x:
-    if not val in count:
-        count[val] = 1
-    else:
-        count[val] += 1
-    return x
     # INSERT YOUR CODE HERE
+    count={}
+    for idx,val in enumerate(x):
+    if not val in count:
+        count[val] = [idx]
+    else:
+        count[val].append(idx)
+    return count
     #raise Exception('Function not yet implemented!')
 
 
@@ -58,22 +58,15 @@ def entropy(y):
 
     Returns the entropy of z: H(z) = p(z=v1) log2(p(z=v1)) + ... + p(z=vk) log2(p(z=vk))
     """
-    count={}
-    for val in y:
-    if not val in count:
-        count[val] = 1
-    else:
-        count[val] += 1
-    total=0
-    for key, value in count.items():
-        total += value
-    entrpy=0
-    for key,value in count.items():
-        entrpy += -1*(value/total)*math.log((value/total), 2)
-    return entrpy
-    # INSERT YOUR CODE HERE
-    #raise Exception('Function not yet implemented!')
 
+    # INSERT YOUR CODE HERE
+    entrpy=0
+    diff_values=partition(y)
+    for key,value in diff_values.items():
+        entrpy += -1*(len(value)/len(y))*math.log((len(value)/len(y)), 2)
+    return entrpy
+        
+    #raise Exception('Function not yet implemented!')
 
 def mutual_information(x, y):
     """
@@ -85,7 +78,16 @@ def mutual_information(x, y):
     """
 
     # INSERT YOUR CODE HERE
-    raise Exception('Function not yet implemented!')
+    h_y=entropy(y) 
+    x_partition=partition(x) # gives dictionary of unique values of x
+    entrpy_m=0
+    for key,value in x_partition.items():
+        y_temp=[]
+        for i in value:
+            y_temp.append(y[int(i)])
+        entrpy_m += (len(y_temp)/len(y))*(entropy(y_temp))
+    return h_y-entrpy_m
+    #raise Exception('Function not yet implemented!')
 
 
 def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
@@ -130,6 +132,14 @@ def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
     """
 
     # INSERT YOUR CODE HERE. NOTE: THIS IS A RECURSIVE FUNCTION.
+    
+    
+    
+    
+    
+    
+    
+    
     raise Exception('Function not yet implemented!')
 
 
