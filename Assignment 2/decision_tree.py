@@ -26,69 +26,67 @@
 # visualize, test, or save the data and results. However, you MAY NOT utilize
 # the package scikit-learn OR ANY OTHER machine learning package in THIS file.
 
+
 import numpy as np
 import os
 import graphviz
 
-
 def partition(x):
+
     """
     Partition the column vector x into subsets indexed by its unique values (v1, ... vk)
-
     Returns a dictionary of the form
     { v1: indices of x == v1,
       v2: indices of x == v2,
       ...
       vk: indices of x == vk }, where [v1, ... vk] are all the unique values in the vector z.
     """
-    # INSERT YOUR CODE HERE
-    count={}
-    for idx,val in enumerate(x):
-    if not val in count:
-        count[val] = [idx]
-    else:
-        count[val].append(idx)
-    return count
-    #raise Exception('Function not yet implemented!')
-
+     # INSERT YOUR CODE HERE
+    partitions = {}
+    i = 0
+    for xi in x:
+        if xi in partitions:
+            partitions[xi].append(i)
+        else:
+            partitions[xi] = [i]
+        i += 1
+    return partitions
+    raise Exception('Function not yet implemented!')
 
 def entropy(y):
+
     """
     Compute the entropy of a vector y by considering the counts of the unique values (v1, ... vk), in z
-
     Returns the entropy of z: H(z) = p(z=v1) log2(p(z=v1)) + ... + p(z=vk) log2(p(z=vk))
     """
-
     # INSERT YOUR CODE HERE
-    entrpy=0
-    diff_values=partition(y)
-    for key,value in diff_values.items():
-        entrpy += -1*(len(value)/len(y))*math.log((len(value)/len(y)), 2)
-    return entrpy
-        
-    #raise Exception('Function not yet implemented!')
+    entropy = 0
+    s = 0
+    for vi in y.keys():
+        s += len(y[vi])
+    for vi in y.keys():
+        entropy += -(len(y[vi])/s) * (np.log2(len(y[vi])/s))
+    return entropy
+    raise Exception('Function not yet implemented!')
 
-def mutual_information(x, y):
+def mutual_information(x, y): #same as information gain
     """
     Compute the mutual information between a data column (x) and the labels (y). The data column is a single attribute
     over all the examples (n x 1). Mutual information is the difference between the entropy BEFORE the split set, and
     the weighted-average entropy of EACH possible split.
-
     Returns the mutual information: I(x, y) = H(y) - H(y | x)
     """
-
     # INSERT YOUR CODE HERE
-    h_y=entropy(y) 
-    x_partition=partition(x) # gives dictionary of unique values of x
-    entrpy_m=0
-    for key,value in x_partition.items():
-        y_temp=[]
-        for i in value:
-            y_temp.append(y[int(i)])
-        entrpy_m += (len(y_temp)/len(y))*(entropy(y_temp))
-    return h_y-entrpy_m
-    #raise Exception('Function not yet implemented!')
-
+    I = entropy(partition(y))
+    I_split = 0
+    s = 0
+    for i in partition(x).values():
+        s += len(i)
+    for part in partition(x).values():
+        y_tmp = [y[i] for i in part]
+        I_split += (len(part)/s)*entropy(partition(y_tmp))
+    return I - I_split
+    raise Exception('Function not yet implemented!')
 
 def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
     """
@@ -100,7 +98,6 @@ def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
         3. If the max_depth is reached (pre-pruning bias), then return the most common value of y (majority label)
     Otherwise the algorithm selects the next best attribute-value pair using INFORMATION GAIN as the splitting criterion
     and partitions the data set based on the values of that attribute before the next recursive call to ID3.
-
     The tree we learn is a BINARY tree, which means that every node has only two branches. The splitting criterion has
     to be chosen from among all possible attribute-value pairs. That is, for a problem with two features/attributes x1
     (taking values a, b, c) and x2 (taking values d, e), the initial attribute value pair list is a list of all pairs of
@@ -112,14 +109,12 @@ def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
      (x2, e)]
      If we select (x2, d) as the best attribute-value pair, then the new decision node becomes: [ (x2 == d)? ] and
      the attribute-value pair (x2, d) is removed from the list of attribute_value_pairs.
-
     The tree is stored as a nested dictionary, where each entry is of the form
                     (attribute_index, attribute_value, True/False): subtree
     * The (attribute_index, attribute_value) determines the splitting criterion of the current node. For example, (4, 2)
     indicates that we test if (x4 == 2) at the current node.
     * The subtree itself can be nested dictionary, or a single label (leaf node).
     * Leaf nodes are (majority) class labels
-
     Returns a decision tree represented as a nested dictionary, for example
     {(4, 1, False):
         {(0, 1, False):
@@ -131,40 +126,92 @@ def id3(x, y, attribute_value_pairs=None, depth=0, max_depth=5):
      (4, 1, True): 1}
     """
 
-    # INSERT YOUR CODE HERE. NOTE: THIS IS A RECURSIVE FUNCTION.
+   # INSERT YOUR CODE HERE. NOTE: THIS IS A RECURSIVE FUNCTION.
+    #Finding the majority label
+    nums = [0,0]
+    for yi in y:
+        nums[yi] += 1
+    if nums[0] > nums[1]:
+        majority_y = 0
+    else:
+        majority_y = 1
+        
+    #End of recurrsion conditions    
+    if list(y) == [y[0]]*len(y):
+        return y[0]                #If pure y i.e all y==0 or all y==1
+    if depth == max_depth:
+        return majority_y          #If max depth reached
+    if attribute_value_pairs == None:   #If all attribute value pairs get removed
+        return majority_y
+ 
+    attrs = set()
+    for av in attribute_value_pairs:
+        attrs.add(av[0]) #Set of all attributes 
+    mutual_info_max = -1   
     
-    
-    
-    
-    
-    
-    
-    
+    for i in attrs:
+        m_i = mutual_information(x[:,i],y)
+        if mutual_info_max <= m_i:
+            best_attr = i
+            mutual_info_max = m_i #Finding attribute of max info gain
+
+    partitioned = partition(x[:,best_attr])
+    max_gain = -1
+    for av in attribute_value_pairs:
+        if av[0] == best_attr:
+            v = av[1]
+            indexes_if_true = partitioned[v]
+            m_i2 = mutual_information(x[indexes_if_true,best_attr],y)
+            if m_i2 > max_gain:
+                value = v
+                max_gain = m_i     #Finding value od the attribute to split on
+
+
+    attribute_value_pairs.remove((best_attr, value)) #removing chosen best attribute value pair before paasing on
+    indexes_if_true = partitioned[value] #choosing true branch x_subset
+    indexes_if_false = [i for i in range(len(x[:,0])) if i not in indexes_if_true] #choosing false branch x_subset
+
+
+
+    try:
+        return {(best_attr, value, False):id3(x[indexes_if_false],y[indexes_if_false],attribute_value_pairs,depth+1,max_depth), 
+        (best_attr, value, True):id3(x[indexes_if_true],y[indexes_if_true],attribute_value_pairs,depth+1,max_depth)}
+    except:
+        return majority_y
+
+    #Return is a dictionary of False branch and True branch called recursively
+    #exception written to counteract an observation seen in monk-3 data
     raise Exception('Function not yet implemented!')
+
+
+
 
 
 def predict_example(x, tree):
     """
     Predicts the classification label for a single example x using tree by recursively descending the tree until
     a label/leaf node is reached.
-
     Returns the predicted label of x according to tree
     """
-
     # INSERT YOUR CODE HERE. NOTE: THIS IS A RECURSIVE FUNCTION.
-    raise Exception('Function not yet implemented!')
 
+    if tree in [0,1]:
+    	return tree
+    curr_node = list(tree.keys())
+    if x[curr_node[0][0]]==curr_node[0][1]:
+    	return predict_example(x,tree[curr_node[1]])
+    else:
+    	return predict_example(x,tree[curr_node[0]])
+    raise Exception('Function not yet implemented!')
 
 def compute_error(y_true, y_pred):
     """
     Computes the average error between the true labels (y_true) and the predicted labels (y_pred)
-
     Returns the error = (1/n) * sum(y_true != y_pred)
     """
-
     # INSERT YOUR CODE HERE
+    return (1/len(y_true)) * sum(y_true != y_pred)
     raise Exception('Function not yet implemented!')
-
 
 def pretty_print(tree, depth=0):
     """
@@ -173,14 +220,11 @@ def pretty_print(tree, depth=0):
     """
     if depth == 0:
         print('TREE')
-
     for index, split_criterion in enumerate(tree):
         sub_trees = tree[split_criterion]
-
         # Print the current node: split criterion
         print('|\t' * depth, end='')
         print('+-- [SPLIT: x{0} = {1} {2}]'.format(split_criterion[0], split_criterion[1], split_criterion[2]))
-
         # Print the children
         if type(sub_trees) is dict:
             pretty_print(sub_trees, depth + 1)
@@ -200,26 +244,21 @@ def render_dot_file(dot_string, save_file, image_format='png'):
         raise TypeError('visualize() requires a string representation of a decision tree.\nUse tree.export_graphviz()'
                         'for decision trees produced by scikit-learn and to_graphviz() for decision trees produced by'
                         'your code.\n')
-
     # Set path to your GraphViz executable here
-    os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
+    os.environ["PATH"] += os.pathsep +'C:/Program Files (x86)/Graphviz2.38/bin/' #'C:/Users/anu07/graphviz-2.38/release/bin'
     graph = graphviz.Source(dot_string)
     graph.format = image_format
     graph.render(save_file, view=True)
-
 
 def to_graphviz(tree, dot_string='', uid=-1, depth=0):
     """
     Converts a tree to DOT format for use with visualize/GraphViz
     DO NOT MODIFY THIS FUNCTION!
     """
-
     uid += 1       # Running index of node ids across recursion
     node_id = uid  # Node id of this node
-
     if depth == 0:
         dot_string += 'digraph TREE {\n'
-
     for split_criterion in tree:
         sub_trees = tree[split_criterion]
         attribute_index = split_criterion[0]
@@ -229,7 +268,6 @@ def to_graphviz(tree, dot_string='', uid=-1, depth=0):
         if not split_decision:
             # Alphabetically, False comes first
             dot_string += '    node{0} [label="x{1} = {2}?"];\n'.format(node_id, attribute_index, attribute_value)
-
         if type(sub_trees) is dict:
             if not split_decision:
                 dot_string, right_child, uid = to_graphviz(sub_trees, dot_string=dot_string, uid=uid, depth=depth + 1)
@@ -237,7 +275,6 @@ def to_graphviz(tree, dot_string='', uid=-1, depth=0):
             else:
                 dot_string, left_child, uid = to_graphviz(sub_trees, dot_string=dot_string, uid=uid, depth=depth + 1)
                 dot_string += '    node{0} -> node{1} [label="True"];\n'.format(node_id, left_child)
-
         else:
             uid += 1
             dot_string += '    node{0} [label="y = {1}"];\n'.format(uid, sub_trees)
@@ -252,30 +289,66 @@ def to_graphviz(tree, dot_string='', uid=-1, depth=0):
     else:
         return dot_string, node_id, uid
 
-
 if __name__ == '__main__':
+
+    
     # Load the training data
     M = np.genfromtxt('./monks-1.train', missing_values=0, skip_header=0, delimiter=',', dtype=int)
     ytrn = M[:, 0]
     Xtrn = M[:, 1:]
 
+    #Part e with user data
+    #M = np.genfromtxt('./transfusion.data', missing_values=0, skip_header=1, delimiter=',',dtype=int)
+    #y = M[:, -1]
+    #X = M[:,:-1]
+#    abc={}
+#    abc[0]=9.74
+#    abc[1]=5.51
+#    abc[2]=1378.68
+#    abc[3]=34.42
+#
+#    for key,val in abc.items():
+#        for i in range(X.shape[0]):
+#            if(X[i,key]>val):
+#                X[i,key]=1
+#            else:
+#                X[i,key]=0 
+#
+#    from sklearn.model_selection import train_test_split
+#    tst_frac = 0.3  # Fraction of examples to sample for the test set
+#    X_trn, X_tst, y_trn, y_tst = train_test_split(X, y, test_size=tst_frac, random_state=42)
+    
     # Load the test data
     M = np.genfromtxt('./monks-1.test', missing_values=0, skip_header=0, delimiter=',', dtype=int)
     ytst = M[:, 0]
     Xtst = M[:, 1:]
+    
+    avpairs = []
+    for i in range(Xtrn.shape[1]):
+        set_values = set()
+        for j in Xtrn[:,i]:
+            if j not in set_values:
+                set_values.add(j)
+                avpairs.append((i,j))
 
     # Learn a decision tree of depth 3
-    decision_tree = id3(Xtrn, ytrn, max_depth=3)
+    decision_tree = id3(Xtrn, ytrn, avpairs, max_depth=5)
 
     # Pretty print it to console
     pretty_print(decision_tree)
 
     # Visualize the tree and save it as a PNG image
     dot_str = to_graphviz(decision_tree)
-    render_dot_file(dot_str, './my_learned_tree')
+    render_dot_file(dot_str, './my_learned_tree3')
+
+
 
     # Compute the test error
     y_pred = [predict_example(x, decision_tree) for x in Xtst]
     tst_err = compute_error(ytst, y_pred)
+    print('Test Error of my tree = {0:4.2f}%.'.format(tst_err * 100))
+    
+#----------------------End of part a of the assignment---------------------------------
 
-    print('Test Error = {0:4.2f}%.'.format(tst_err * 100))
+
+   
