@@ -16,9 +16,9 @@ else:
                                                     TEST PATH containing both ham and spam folder>")
     
 #We need to find 
-#P(ham|bodyText) = (P(ham) * P(bodyText|ham)) / P(bodyText)
 #P(ham) = number of documents belonging to category ham / Total Number of documents
 #P(spam) = number of documents belonging to category spam / Total Number of documents
+#P(ham|bodyText) = (P(ham) * P(bodyText|ham)) / P(bodyText)
 #P(bodyText|spam) = P(word1|spam) * P(word2|spam)*.....
 #P(bodyText|ham) = P(word1|ham) * P(word2|ham)*.....
 #P(word1|spam) = count of word1 belonging to category spam / Total count of words belonging to category spam 
@@ -38,10 +38,8 @@ else:
 #              (total number of words belonging to ham + number of distinct words in training database)
 #P(word1|spam) = (count of word1 belonging to category spam + 1)/
 #                 (total number of words belonging to spam + number of distinct words in training database)    
- 
+#location of the folder for ham & spam for train and test
 
-
-#location of the folder for ham & spam for train and test 
 HamFolderPath = train_path + '/ham'
 SpamFolderPath = train_path + '/spam'
 

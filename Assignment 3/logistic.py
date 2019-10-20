@@ -7,9 +7,9 @@ import codecs
 import numpy
 
 
-from utilityfunctions import GetWordListsAndNumberOffiles
-from utilityfunctions import ReadFile
-from utilityfunctions import ListOfStopWords
+from utils import GetWordListsAndNumberOffiles
+from utils import ReadFile
+from utils import stop_words
 
 
 
@@ -30,8 +30,8 @@ else:
               \n<Number of Iteration>")
 
 #location of the folder for ham & spam for trainining 
-HamTrainPath = train_path + '\ham'
-SpamTrainPath = train_path + '\spam'
+HamTrainPath = train_path + '/ham'
+SpamTrainPath = train_path + '/spam'
 
 #Find out all the words in trainging file of ham and spam folders respectively
 #and create Listof all the words
@@ -39,7 +39,7 @@ WordListInTrainHam,TrainHamFileCount= GetWordListsAndNumberOffiles(HamTrainPath)
 WordListInTrainSpam,TrainSpamFileCount = GetWordListsAndNumberOffiles(SpamTrainPath)
 
 def FilterStopWords():
-    for word in ListOfStopWords:
+    for word in stop_words:
         if word in WordListInTrainHam:
             WordListInTrainHam.remove(word)
         if word in WordListInTrainSpam:
@@ -187,7 +187,7 @@ WordListInTestHam,TestHamFileCount= GetWordListsAndNumberOffiles(HamTestPath)
 WordListInTestSpam,TestSpamFileCount = GetWordListsAndNumberOffiles(SpamTestPath)
 
 def FilterTestStopWords():
-    for word in ListOfStopWords:
+    for word in stop_words:
         if word in WordListInTestHam:
             WordListInTestHam.remove(word)
         if word in WordListInTestSpam:
@@ -197,7 +197,7 @@ if(sys.argv[3] == "yes"):
     FilterTestStopWords()
     print("\n Removed stop words")
 else:
-    print("\n not removed")
+    print("\n Stop words not removed")
     
 #Combine all the words from Ham and Spam files and take total count of files
 AllTestWords = WordListInTestHam + WordListInTestSpam
