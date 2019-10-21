@@ -1,4 +1,3 @@
-
 import sys
 import collections
 import os
@@ -7,273 +6,263 @@ import codecs
 import numpy
 
 
-from utils import GetWordListsAndNumberOffiles
-from utils import ReadFile
-from utils import stop_words
-
-
-
-
-if(len(sys.argv) == 6):
-    train_path = sys.argv[1]
-    test_path = sys.argv[2]
-    RemoveStopWords = sys.argv[3]
-    Lambda = float(sys.argv[4])
-    Iteration = sys.argv[5]
-    
+if (len(sys.argv) != 6):  
+    sys.exit("Please give valid Arguments- \n<path to TRAIN FOLDER that has both ham and spam folder> \
+              \n<path to TEST FOLDER that has both ham and spam folder>\
+              \n<yes or no to remove stop words\
+              \n<Regularization parameters>\
+              \n<iteration>")
 else:
-    sys.exit("Please provide right number of Arguments-\
-             \n<TRAINING FOLDER path  \
-              \n<TESTING FOLDER path \
-              \n<Remove stop words yes or no\
-              \n<Regularization parameter (Lambda value)>\
-              \n<Number of Iteration>")
+    train = sys.argv[1]
+    test = sys.argv[2]
+    Stop = sys.argv[3]
+    Lamda = float(sys.argv[4])
+    Iteration = sys.argv[5]
 
-#location of the folder for ham & spam for trainining 
-HamTrainPath = train_path + '/ham'
-SpamTrainPath = train_path + '/spam'
+ham = list()
+spam = list()
+countTrainHam = 0
+countTrainSpam = 0
+dictProbHam = dict()
+dictProbSpam = dict()
+learningRate = 0.001
+regularization = Lamda
 
-#Find out all the words in trainging file of ham and spam folders respectively
-#and create Listof all the words
-WordListInTrainHam,TrainHamFileCount= GetWordListsAndNumberOffiles(HamTrainPath)
-WordListInTrainSpam,TrainSpamFileCount = GetWordListsAndNumberOffiles(SpamTrainPath)
+stopWords = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+             "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below",
+             "between", "both", "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't",
+             "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for", "from",
+             "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd",
+             "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how",
+             "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its",
+             "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of",
+             "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over",
+             "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some",
+             "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+             "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through",
+             "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've",
+             "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
+             "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
+             "you're", "you've", "your", "yours", "yourself", "yourselves"]
+bias = 0
+xnode = 1
+directoryHam = train + '/ham'
+directorySpam = train + '/spam'
+testHam = test + '/ham'
+testSpam = test + '/spam'
 
-def FilterStopWords():
-    for word in stop_words:
-        if word in WordListInTrainHam:
-            WordListInTrainHam.remove(word)
-        if word in WordListInTrainSpam:
-            WordListInTrainSpam.remove(word)
+# Regualar expression to clean the data given in train ham and spam folder
+regex = re.compile(r'[A-Za-z0-9\']')
 
-if(sys.argv[3] == "yes"):
-    FilterStopWords()
-    
-#Combine all the words from Ham and Spam files and take total count of files
-AllWords = WordListInTrainHam + WordListInTrainSpam
-AllFiles = TrainHamFileCount + TrainSpamFileCount
+def FileOpen(filename, path):
+    fileHandler = codecs.open(path + "\\" + filename, 'rU',
+                              'latin-1')  # codecs handles -> UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 1651: character maps to <undefined>
+    words = [Findwords.lower() for Findwords in re.findall('[A-Za-z0-9\']+', fileHandler.read())]
+    fileHandler.close()
+    return words
 
-#Remove duplicate words from all word list
-#collections.Counter will create a dictionary with each word as key and its count as value
-#After that we are making list of unique words 
-UniqueWords_counter = collections.Counter(AllWords)
-UniqueWords = list(UniqueWords_counter.keys())
+def browseDirectory(path):
+    wordList = list()
+    fileCount = 0
+    for files in os.listdir(path):
+        if files.endswith(".txt"):
+            wordList += FileOpen(files, path)
+            fileCount += 1
+    return wordList, fileCount
 
-#Vectorize each file and all the words
-#here each word is a feature and rows are each file
-#initialize each value to zero
-def CreateFeatureVector(row, column):
-    featureVector = [[0 for columnNumber in range(column)] for rowNumber in range(row)]
-    return featureVector
 
-#Create training feature vector
-trainingFeatureVector = CreateFeatureVector(AllFiles,len(UniqueWords) )
+# iterating through train to get the list of ham words used to form combined bag of words
+ham, countTrainHam = browseDirectory(directoryHam)
+spam, countTrainSpam = browseDirectory(directorySpam)
 
-#Create List of classifier which will contain type of file (ham or spam)
-ClassifierList = []
-sigmoidList = []
+# iterating through test to get the list of ham words used to form combined bag of words
 
-for i in range(AllFiles):
-    sigmoidList.append(-1)
-    ClassifierList.append(-1)
+hamTest, countTestHam = browseDirectory(testHam)
+SpamTest, countTestSpam = browseDirectory(testSpam)
 
-#Fill the feature Vector
+
+def removeStopWords():
+    for word in stopWords:
+        if word in ham:
+            ham.remove(word)
+        if word in spam:
+            spam.remove(word)
+        if word in hamTest:
+            hamTest.remove(word)
+        if word in SpamTest:
+            SpamTest.remove(word)
+
+
+if (sys.argv[3] == "yes"):
+    removeStopWords()
+
+# collections.Counter counts the number of occurence of memebers in list
+rawHam = dict(collections.Counter(w.lower() for w in ham))
+dictHam = dict((k, int(v)) for k, v in rawHam.items())
+rawSpam = dict(collections.Counter(w.lower() for w in spam))
+dictSpam = dict((k, int(v)) for k, v in rawSpam.items())
+
+bagOfWords = ham + spam
+dictBagOfWords = collections.Counter(bagOfWords)
+listBagOfWords = list(dictBagOfWords.keys())
+TargetList = list()  # final value of ham or spam, ham = 1 & spam = 0
+totalFiles = countTrainHam + countTrainSpam
+
+#
+rawTestHam = dict(collections.Counter(w.lower() for w in hamTest))
+dictTestHam = dict((k, int(v)) for k, v in rawTestHam.items())
+rawTestSpam = dict(collections.Counter(w.lower() for w in SpamTest))
+dictTestSpam = dict((k, int(v)) for k, v in rawTestSpam.items())
+
+# correct it to testham/spam
+testBagOfWords = hamTest + SpamTest
+testDictBagOfWords = collections.Counter(testBagOfWords)
+testListBagOfWords = list(testDictBagOfWords.keys())
+testTargetList = list()  # final value of ham or spam, ham = 1 & spam = 0
+totalTestFiles = countTestHam + countTestSpam
+
+
+# initialize matrix to zero
+# use list comprehension to create this matrix
+def initiliazeMatrix(row, column):
+    featureMatrix = [0] * row
+    for i in range(row):
+        featureMatrix[i] = [0] * column
+    return featureMatrix
+
+trainFeatureMatrix = initiliazeMatrix(totalFiles, len(listBagOfWords))
+testFeatureMatrix = initiliazeMatrix(totalTestFiles, len(testListBagOfWords))
+
 rowMatrix = 0
-def FillFeatureVector(featureVector,path,UniqueWords,rowMatrix,classifier,ClassifierList):
+testRowMatrix = 0
+
+sigMoidList = list()  # for each row
+for i in range(totalFiles):
+    sigMoidList.append(-1)
+    TargetList.append(-1)
+
+for i in range(totalTestFiles):
+    testTargetList.append(-1)
+
+weightOfFeature = list()
+
+for feature in range(len(listBagOfWords)):
+    weightOfFeature.append(0)  # initializinf weight = 0
+
+
+def makeMatrix(featureMatrix, path, listBagOfWords, rowMatrix, classifier, TargetList):
     for fileName in os.listdir(path):
-        words = ReadFile(fileName,path)
+        words = FileOpen(fileName, path)
         temp = dict(collections.Counter(words))
         for key in temp:
-            if key in UniqueWords:
-                column = UniqueWords.index(key)
-                featureVector[rowMatrix][column] = temp[key]        
-        if(classifier == "ham"):
-            ClassifierList[rowMatrix] =0
-        elif(classifier == "spam"):
-            ClassifierList[rowMatrix] = 1
-        rowMatrix +=1
-    return featureVector,rowMatrix,ClassifierList
- 
+            if key in listBagOfWords:
+                column = listBagOfWords.index(key)
+                featureMatrix[rowMatrix][column] = temp[key]
+        if (classifier == "ham"):
+            TargetList[rowMatrix] = 0
+        elif (classifier == "spam"):
+            TargetList[rowMatrix] = 1
+        rowMatrix += 1
+    return featureMatrix, rowMatrix, TargetList
 
-       
-#train matrix including ham and spam
-trainingFeatureVector,rowMatrix,ClassifierList= FillFeatureVector(trainingFeatureVector,
-                                                           HamTrainPath,
-                                                           UniqueWords,
-                                                           rowMatrix,
-                                                           "ham",
-                                                           ClassifierList)
 
-trainingFeatureVector,rowMatrix,ClassifierList= FillFeatureVector(trainingFeatureVector,
-                                                           SpamTrainPath,
-                                                           UniqueWords,
-                                                           rowMatrix,
-                                                           "spam",
-                                                           ClassifierList)  
+# train matrix including ham and spam
+trainFeatureMatrix, rowMatrix, TargetList = makeMatrix(trainFeatureMatrix, directoryHam, listBagOfWords, rowMatrix,
+                                                       "ham", TargetList)
+trainFeatureMatrix, rowMatrix, TargetList = makeMatrix(trainFeatureMatrix, directorySpam, listBagOfWords, rowMatrix,
+                                                       "spam", TargetList)
 
-#Logistic Regression
-#1/1+exp(-z)
-#P(Y=1|X) = 1/1+exp(w0 + summation of product of all feature with its weights)
-#Classification Rule
-#P(Y=1|X)/P(Y=0|X) > 1 then assign 1 otherwise 0
-#Learn the weights
-#
+testFeatureMatrix, testRowMatrix, testTargetList = makeMatrix(testFeatureMatrix, testHam, testListBagOfWords,
+                                                              testRowMatrix, "ham", testTargetList)
+testFeatureMatrix, testRowMatrix, testTargetList = makeMatrix(testFeatureMatrix, testSpam, testListBagOfWords,
+                                                              testRowMatrix, "spam", testTargetList)
 
-#Create the vector of weight for all feature and initialize it to 0
-Featureweights = []
-Featureweights = [0.0 for eachWord in range(len(UniqueWords))]
 
-#for feature in range(len(UniqueWords)):
-#    Featureweights.append(0) 
-
-bias = 0 
-learningRate = 0.001
-regularization = Lambda
-  
 # for each column
-def _sigmoid(z):
-    return 1 / (1 + numpy.exp(-z))
+def sigmoid(x):
+    den = (1 + numpy.exp(-x))
+    sigma = 1 / den
+    return sigma
 
-#Calculate for each file 
- #Calculating P(Y=1|X) = 1/1+exp(w0 + summation of product of all feature with its weights)
-def PopulateSigmoid(AllFiles,numberOffeatures,featureVector):
-    global sigmoidList
-    for files in range(AllFiles):
-        summation = 1.0       
-        for features in range(numberOffeatures):
-            summation +=featureVector[files][features] * Featureweights[features]
-        sigmoidList[files] = _sigmoid(summation)
 
-#Weight update rule
-#new_weight = old_weight 
-#              + learningRate * (Sum of all (feature * P(Y=1|X, w))) 
-#              - learningRate * regularization * oldweight
-#Here, P(Y=1|X, w) is calculated using sigmoid function
-
-def UpdateWeights(AllFiles,numberOfFeature,featureVector,ClassifierList):
+# Calculate for each file
+def sigmoidFunction(totalFiles, totalFeatures, featureMatrix):
     global sigMoidList
-    
+    for files in range(totalFiles):
+        summation = 1.0
+
+        for features in range(totalFeatures):
+            summation += featureMatrix[files][features] * weightOfFeature[features]
+        sigMoidList[files] = sigmoid(summation)
+
+
+def calculateWeightUpdate(totalFiles, numberOfFeature, featureMatrix, TargetList):
+    global sigMoidList
+
     for feature in range(numberOfFeature):
         weight = bias
-        for files in range(AllFiles):
-            frequency = featureVector[files][feature]
-            y = ClassifierList[files]
-            sigmoidValue = sigmoidList[files]
+        for files in range(totalFiles):
+            frequency = featureMatrix[files][feature]
+            y = TargetList[files]
+            sigmoidValue = sigMoidList[files]
             weight += frequency * (y - sigmoidValue)
-        
-        oldWeight = Featureweights[feature]
-        # weight update formula as given on slide 26 of Logistic Regression.pdf
-        Featureweights[feature] += ((weight * learningRate) - (learningRate * regularization * oldWeight ) ) 
-    return Featureweights        
-        
-##Train and find out weights
-def Training(AllFiles, numberOffeatures,trainingFeatureVector,ClassifierList):
-    PopulateSigmoid(AllFiles, numberOffeatures,trainingFeatureVector)
-    UpdateWeights(AllFiles, numberOffeatures,trainingFeatureVector,ClassifierList)  
 
-print("Train Logistics algorithm - ")
-for i in range(int(Iteration)):
-    print(i, end = ' ')
-    Training(AllFiles, len(UniqueWords),trainingFeatureVector,ClassifierList) 
-    
-print("Trained the weights successfully")
+        oldW = weightOfFeature[feature]
+        weightOfFeature[feature] += ((weight * learningRate) - (learningRate * regularization * oldW))
+
+    return weightOfFeature
 
 
-HamTestPath = test_path + '\ham'
-SpamTestPath = test_path + '\spam'
+def trainingFunction(totalFiles, numbeOffeatures, trainFeatureMatrix, TargetList):
+    sigmoidFunction(totalFiles, numbeOffeatures, trainFeatureMatrix)
+    calculateWeightUpdate(totalFiles, numbeOffeatures, trainFeatureMatrix, TargetList)
 
-#Find out all the words in trainging file of ham and spam folders respectively
-#and create Listof all the words
-WordListInTestHam,TestHamFileCount= GetWordListsAndNumberOffiles(HamTestPath)
-WordListInTestSpam,TestSpamFileCount = GetWordListsAndNumberOffiles(SpamTestPath)
 
-def FilterTestStopWords():
-    for word in stop_words:
-        if word in WordListInTestHam:
-            WordListInTestHam.remove(word)
-        if word in WordListInTestSpam:
-            WordListInTestSpam.remove(word)
+def classifyData():
+    correctHam = 0
+    incorrectHam = 0
+    correctSpam = 0
+    incorrectSpam = 0
+    overallAccuracy=0
+    idx=0
+    for file in range(totalTestFiles):
+        print('TestFile : '+str(idx+1))
+        summation = 1.0
+        for i in range(len(testListBagOfWords)):
+            word = testListBagOfWords[i]
 
-if(sys.argv[3] == "yes"):
-    FilterTestStopWords()
-    print("\n Removed stop words")
-else:
-    print("\n Stop words not removed")
-    
-#Combine all the words from Ham and Spam files and take total count of files
-AllTestWords = WordListInTestHam + WordListInTestSpam
-AllTestFiles = TestHamFileCount + TestSpamFileCount
+            if word in listBagOfWords:
+                index = listBagOfWords.index(word)
+                weight = weightOfFeature[index]
+                wordcount = testFeatureMatrix[file][i]
 
-#Remove duplicate words from all word list
-#collections.Counter will create a dictionary with each word as key and its count as value
-#After that we are making list of unique words 
-UniqueTestWords_counter = collections.Counter(AllTestWords)
-UniqueTestWords = list(UniqueTestWords_counter.keys())
+                summation += weight * wordcount
 
-#test matrix including ham and spam
-testClassifierList = []
-rowTestMatrix=0
-
-for i in range(AllTestFiles):
-    testClassifierList.append(-1)
-    
-    
-testFeatureVector = CreateFeatureVector(AllTestFiles,len(UniqueTestWords) )
-
-testFeatureVector,rowTestMatrix,testClassifierList= FillFeatureVector(testFeatureVector,
-                                                           HamTestPath,
-                                                           UniqueTestWords,
-                                                           rowTestMatrix,
-                                                           "ham",
-                                                           testClassifierList)
-
-testFeatureVector,rowTestMatrix,testClassifierList= FillFeatureVector(testFeatureVector,
-                                                           SpamTestPath,
-                                                           UniqueTestWords,
-                                                           rowTestMatrix,
-                                                           "spam",
-                                                           testClassifierList)
-
-## Classify the test email and find out accuracy
-def ClassifyEmailAsHamOrSpam():    
-    numberOfHamsCorrectlyClassified, numberOfHamsIncorrectlyClassified = 0, 0
-    numberOfSpamsCorrectlyClassified, numberOfSpamIncorrectlyClassified = 0, 0  
-    
-    for file in range(AllFiles):
-        summationOfWeightAndFrequency = 1.0
-        for wordIndex in range(len(UniqueTestWords)):
-            word= UniqueTestWords[wordIndex]
-            
-            if word in UniqueWords:
-                indexOfWord = UniqueWords.index(word)
-                weight= Featureweights[indexOfWord]
-                wordcount = testFeatureVector[file][wordIndex]
-                
-                summationOfWeightAndFrequency += weight*wordcount
-                
-        try:
-            valueOfSigmoidFunction = _sigmoid(summationOfWeightAndFrequency)
-        except Exception:
-            print("Exception while executing sigmoid function.")
-            
-        if(testClassifierList[file] == 0):
-            if valueOfSigmoidFunction < 0.5:
-                numberOfHamsCorrectlyClassified += 1.0
+        sigSum = sigmoid(summation)
+        if (testTargetList[file] == 0):
+            if sigSum < 0.5:
+                correctHam += 1.0
             else:
-                numberOfHamsIncorrectlyClassified += 1.0
+                incorrectHam += 1.0
         else:
-            if valueOfSigmoidFunction >= 0.5:
-                numberOfSpamsCorrectlyClassified += 1.0
+            if sigSum >= 0.5:
+                correctSpam += 1.0
             else:
-                numberOfSpamIncorrectlyClassified += 1.0
-    
-    accuracyOnHamFiles = round((numberOfHamsCorrectlyClassified * 100)/(numberOfHamsCorrectlyClassified + numberOfHamsIncorrectlyClassified) , 2)            
-    accuracyOnSpamFiles = round((numberOfSpamsCorrectlyClassified * 100) / (numberOfSpamsCorrectlyClassified + numberOfSpamIncorrectlyClassified), 2)
-    print("Accuracy over Ham files: {}%".format(str(accuracyOnHamFiles)))
-    print("Accuracy over Spam files: {}%".format(str(accuracyOnSpamFiles)))        
-    
-print("Completed Training")
-print("\nPlease wait while classifying the test emails..\n")
-ClassifyEmailAsHamOrSpam()
+                incorrectSpam += 1.0
+        idx += 1
+    print("Accuracy on Ham:" + str((correctHam / (correctHam + incorrectHam)) * 100))
+    print("Accuracy on Spam:" + str((correctSpam / (correctSpam + incorrectSpam)) * 100))
+    print("Overall Accuracy :" + str(((correctHam+correctSpam) / (correctHam + incorrectHam+correctSpam + incorrectSpam)) * 100))
 
+
+print("Training the algorithm - ")
+for i in range(int(Iteration)):
+    print(i, end=' ')
+    trainingFunction(totalFiles, len(listBagOfWords), trainFeatureMatrix, TargetList)
+
+
+print("Training completed successfully")
+print("\nPlease wait while classifying the data..\nIt may take few minutes")
+classifyData()
 
 
