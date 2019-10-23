@@ -44,6 +44,9 @@ stopWords = ["a", "about", "above", "after", "again", "against", "all", "am", "a
              "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
              "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
              "you're", "you've", "your", "yours", "yourself", "yourselves"]
+
+
+
 bias = 0
 xnode = 1
 directoryHam = train + '/ham'
@@ -70,31 +73,81 @@ def browseDirectory(path):
             fileCount += 1
     return wordList, fileCount
 
-
 # iterating through train to get the list of ham words used to form combined bag of words
 ham, countTrainHam = browseDirectory(directoryHam)
 spam, countTrainSpam = browseDirectory(directorySpam)
 
 # iterating through test to get the list of ham words used to form combined bag of words
-
 hamTest, countTestHam = browseDirectory(testHam)
 SpamTest, countTestSpam = browseDirectory(testSpam)
 
-
 def removeStopWords():
-    for word in stopWords:
-        if word in ham:
-            ham.remove(word)
-        if word in spam:
-            spam.remove(word)
-        if word in hamTest:
-            hamTest.remove(word)
-        if word in SpamTest:
-            SpamTest.remove(word)
+    #print('Begin')
 
+    for word in stopWords:
+        #print(word)
+        if word in ham:
+            i = 0
+            lengthh=len(ham)
+            while (i < lengthh):
+                #print(i)
+                if (ham[i] == word):
+                    ham.remove(word)
+                    lengthh = lengthh - 1
+                    continue
+                i = i + 1
+            #ham.remove(word)
+        #print('Done Ham')
+        if word in spam:
+            i = 0
+            lengths=len(spam)
+            while (i < lengths):
+                if (spam[i] == word):
+                    spam.remove(word)
+                    lengths = lengths - 1
+                    continue
+                i = i + 1
+            #spam.remove(word)
+        #print('Done Spam')
+        if word in hamTest:
+            i = 0
+            lengthht=len(hamTest)
+            while (i < lengthht):
+                if (hamTest[i] == word):
+                    hamTest.remove(word)
+                    lengthht = lengthht - 1
+                    continue
+                i = i + 1
+            #hamTest.remove(word)
+        #print('Done HamTest')
+        if word in SpamTest:
+            i = 0
+            lengthst=len(SpamTest)
+            while (i < lengthst):
+                if (SpamTest[i] == word):
+                    SpamTest.remove(word)
+                    lengthst = lengthst - 1
+                    continue
+                i = i + 1
+        #print('Done SpamTest')
+            #SpamTest.remove(word)
+    #with open('rham.txt', 'w') as filehandle:
+    #    for listitem in ham:
+    #        filehandle.write('%s\n' % listitem)
+    #with open('rspam.txt', 'w') as filehandle:
+    #    for listitem in spam:
+    #        filehandle.write('%s\n' % listitem)
+    #with open('rhamtest.txt', 'w') as filehandle:
+    #    for listitem in hamTest:
+    #        filehandle.write('%s\n' % listitem)
+    #with open('rspamTest.txt', 'w') as filehandle:
+    #    for listitem in SpamTest:
+    #        filehandle.write('%s\n' % listitem)
+    #print('End')
 
 if (sys.argv[3] == "yes"):
     removeStopWords()
+
 
 # collections.Counter counts the number of occurence of memebers in list
 rawHam = dict(collections.Counter(w.lower() for w in ham))
@@ -108,7 +161,6 @@ listBagOfWords = list(dictBagOfWords.keys())
 TargetList = list()  # final value of ham or spam, ham = 1 & spam = 0
 totalFiles = countTrainHam + countTrainSpam
 
-#
 rawTestHam = dict(collections.Counter(w.lower() for w in hamTest))
 dictTestHam = dict((k, int(v)) for k, v in rawTestHam.items())
 rawTestSpam = dict(collections.Counter(w.lower() for w in SpamTest))
@@ -120,6 +172,10 @@ testDictBagOfWords = collections.Counter(testBagOfWords)
 testListBagOfWords = list(testDictBagOfWords.keys())
 testTargetList = list()  # final value of ham or spam, ham = 1 & spam = 0
 totalTestFiles = countTestHam + countTestSpam
+
+#with open('afterrt.txt', 'w') as filehandle:
+#    for listitem in testListBagOfWords:
+#        filehandle.write('%s\n' % listitem)
 
 
 # initialize matrix to zero
