@@ -45,8 +45,6 @@ stopWords = ["a", "about", "above", "after", "again", "against", "all", "am", "a
              "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
              "you're", "you've", "your", "yours", "yourself", "yourselves"]
 
-
-
 bias = 0
 xnode = 1
 directoryHam = train + '/ham'
@@ -54,7 +52,7 @@ directorySpam = train + '/spam'
 testHam = test + '/ham'
 testSpam = test + '/spam'
 
-# Regualar expression to clean the data given in train ham and spam folder
+# Regular expression to clean the data given in train ham and spam folder
 regex = re.compile(r'[A-Za-z0-9\']')
 
 def FileOpen(filename, path):
@@ -82,22 +80,16 @@ hamTest, countTestHam = browseDirectory(testHam)
 SpamTest, countTestSpam = browseDirectory(testSpam)
 
 def removeStopWords():
-    #print('Begin')
-
     for word in stopWords:
-        #print(word)
         if word in ham:
             i = 0
             lengthh=len(ham)
             while (i < lengthh):
-                #print(i)
                 if (ham[i] == word):
                     ham.remove(word)
                     lengthh = lengthh - 1
                     continue
                 i = i + 1
-            #ham.remove(word)
-        #print('Done Ham')
         if word in spam:
             i = 0
             lengths=len(spam)
@@ -107,8 +99,6 @@ def removeStopWords():
                     lengths = lengths - 1
                     continue
                 i = i + 1
-            #spam.remove(word)
-        #print('Done Spam')
         if word in hamTest:
             i = 0
             lengthht=len(hamTest)
@@ -118,8 +108,6 @@ def removeStopWords():
                     lengthht = lengthht - 1
                     continue
                 i = i + 1
-            #hamTest.remove(word)
-        #print('Done HamTest')
         if word in SpamTest:
             i = 0
             lengthst=len(SpamTest)
@@ -129,25 +117,10 @@ def removeStopWords():
                     lengthst = lengthst - 1
                     continue
                 i = i + 1
-        #print('Done SpamTest')
-            #SpamTest.remove(word)
-    #with open('rham.txt', 'w') as filehandle:
-    #    for listitem in ham:
-    #        filehandle.write('%s\n' % listitem)
-    #with open('rspam.txt', 'w') as filehandle:
-    #    for listitem in spam:
-    #        filehandle.write('%s\n' % listitem)
-    #with open('rhamtest.txt', 'w') as filehandle:
-    #    for listitem in hamTest:
-    #        filehandle.write('%s\n' % listitem)
-    #with open('rspamTest.txt', 'w') as filehandle:
-    #    for listitem in SpamTest:
-    #        filehandle.write('%s\n' % listitem)
-    #print('End')
+
 
 if (sys.argv[3] == "yes"):
     removeStopWords()
-
 
 # collections.Counter counts the number of occurence of memebers in list
 rawHam = dict(collections.Counter(w.lower() for w in ham))
@@ -173,13 +146,9 @@ testListBagOfWords = list(testDictBagOfWords.keys())
 testTargetList = list()  # final value of ham or spam, ham = 1 & spam = 0
 totalTestFiles = countTestHam + countTestSpam
 
-#with open('afterrt.txt', 'w') as filehandle:
-#    for listitem in testListBagOfWords:
-#        filehandle.write('%s\n' % listitem)
 
 
-# initialize matrix to zero
-# use list comprehension to create this matrix
+# initialize matrix to zero and use list comprehension to create this matrix
 def initiliazeMatrix(row, column):
     featureMatrix = [0] * row
     for i in range(row):
@@ -203,7 +172,7 @@ for i in range(totalTestFiles):
 weightOfFeature = list()
 
 for feature in range(len(listBagOfWords)):
-    weightOfFeature.append(0)  # initializinf weight = 0
+    weightOfFeature.append(0)
 
 
 def makeMatrix(featureMatrix, path, listBagOfWords, rowMatrix, classifier, TargetList):
@@ -222,7 +191,7 @@ def makeMatrix(featureMatrix, path, listBagOfWords, rowMatrix, classifier, Targe
     return featureMatrix, rowMatrix, TargetList
 
 
-# train matrix including ham and spam
+#train matrix including ham and spam
 trainFeatureMatrix, rowMatrix, TargetList = makeMatrix(trainFeatureMatrix, directoryHam, listBagOfWords, rowMatrix,
                                                        "ham", TargetList)
 trainFeatureMatrix, rowMatrix, TargetList = makeMatrix(trainFeatureMatrix, directorySpam, listBagOfWords, rowMatrix,
@@ -279,7 +248,6 @@ def classifyData():
     incorrectHam = 0
     correctSpam = 0
     incorrectSpam = 0
-    overallAccuracy=0
     idx=0
     for file in range(totalTestFiles):
         print('TestFile : '+str(idx+1))
